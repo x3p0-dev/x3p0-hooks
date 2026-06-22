@@ -20,10 +20,11 @@ use ReflectionMethod;
 
 /**
  * A trait for defining attribute-based actions and filters with class members.
- * It registers the hooks in its `boot()` method, so a class can `use Hookable`
- * and call `boot()` to have its `#[Action]`/`#[Filter]` members wired
- * automatically. A consuming class that implements a bootable contract can use
- * this `boot()` to satisfy it.
+ * A class can `use Hookable` and call `registerHookCallbacks()` from its own
+ * lifecycle method (e.g., `boot()`) to have its `#[Action]`/`#[Filter]` members
+ * wired to WordPress automatically. The trait is unopinionated about lifecycle:
+ * it exposes no public method, so the consuming class owns when registration
+ * runs and under what name.
  */
 trait Hookable
 {
@@ -33,13 +34,16 @@ trait Hookable
 	protected ReflectionClass $reflector;
 
 	/**
-	 * Boots the component, running its actions/filters.
+	 * Registers the object's actions and filters by reflecting its members
+	 * and wiring every `#[Action]`/`#[Filter]` attribute to WordPress.
 	 *
 	 * @throws ReflectionException
 	 */
-	public function boot(): void
+	protected function registerHookCallbacks(): void
 	{
-		$this->hookMembers();
+		$this->registerMethodCallbacks();
+		$this->registerPropertyCallbacks();
+		$this->registerConstantCallbacks();
 	}
 
 	/**
@@ -55,45 +59,12 @@ trait Hookable
 	}
 
 	/**
-	 * Adds all class members with attributes that have the `Hook` contract
-	 * as actions or filters.
+	 * Registers callbacks for methods with attributes that have the `Hook`
+	 * contract as actions or filters.
 	 *
 	 * @throws ReflectionException
 	 */
-	protected function hookMembers(): void
-	{
-		$this->hookMethods();
-		$this->hookProperties();
-		$this->hookConstants();
-	}
-
-	/**
-	 * Adds constants with attributes that have the `Hook` contract as
-	 * anonymous actions or filters.
-	 */
-	protected function hookConstants(): void
-	{
-		foreach ($this->getReflector()->getReflectionConstants() as $constant) {
-			$attributes = $constant->getAttributes(
-				Hook::class,
-				ReflectionAttribute::IS_INSTANCEOF
-			);
-
-			foreach ($attributes as $attribute) {
-				$attribute->newInstance()->register(
-					fn() => $constant->getValue()
-				);
-			}
-		}
-	}
-
-	/**
-	 * Adds methods with attributes that have the `Hook` contract as actions
-	 * or filters.
-	 *
-	 * @throws ReflectionException
-	 */
-	protected function hookMethods(): void
+	protected function registerMethodCallbacks(): void
 	{
 		// Grab methods of any visibility, excluding the constructor.
 		$methods = array_filter(
@@ -124,10 +95,10 @@ trait Hookable
 	}
 
 	/**
-	 * Adds properties with attributes that have the `Hook` contract as
-	 * anonymous actions or filters.
+	 * Registers callbacks for properties with attributes that have the
+	 * `Hook` contract as actions or filters.
 	 */
-	protected function hookProperties(): void
+	protected function registerPropertyCallbacks(): void
 	{
 		foreach ($this->getReflector()->getProperties() as $property) {
 			$attributes = $property->getAttributes(
@@ -138,6 +109,26 @@ trait Hookable
 			foreach ($attributes as $attribute) {
 				$attribute->newInstance()->register(
 					fn() => $property->getValue($this)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Registers callbacks for constants with attributes that have the
+	 * `Hook` contract as actions or filters.
+	 */
+	protected function registerConstantCallbacks(): void
+	{
+		foreach ($this->getReflector()->getReflectionConstants() as $constant) {
+			$attributes = $constant->getAttributes(
+				Hook::class,
+				ReflectionAttribute::IS_INSTANCEOF
+			);
+
+			foreach ($attributes as $attribute) {
+				$attribute->newInstance()->register(
+					fn() => $constant->getValue()
 				);
 			}
 		}

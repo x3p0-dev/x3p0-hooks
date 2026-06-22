@@ -34,8 +34,8 @@ composer require x3p0-dev/x3p0-hooks
 ## Quick Start
 
 Add the `Hookable` trait to a class, mark members with `#[Action]` or
-`#[Filter]`, and call `boot()`. The trait reflects the class and wires every
-attributed member to WordPress:
+`#[Filter]`, then call `registerHookCallbacks()` from your own method. The trait
+reflects the class and wires every attributed member to WordPress:
 
 ```php
 use X3P0\Hooks\Action;
@@ -45,6 +45,12 @@ use X3P0\Hooks\Hookable;
 final class Assets
 {
 	use Hookable;
+
+	// Your own lifecycle method — name it whatever fits your project.
+	public function boot(): void
+	{
+		$this->registerHookCallbacks();
+	}
 
 	#[Action('wp_enqueue_scripts')]
 	public function enqueue(): void
@@ -72,16 +78,19 @@ automatically.
 
 ### The `Hookable` Trait
 
-`Hookable` provides the `boot()` method that does the work. When called, it
-reflects the class and registers every method, property, and class constant
-marked with a hook attribute. Methods of any visibility are supported —
-protected and private methods are bound and registered as closures, so they
-work as hook callbacks without being public.
+`Hookable` provides the protected `registerHookCallbacks()` method that does the
+work. When called, it reflects the class and registers every method, property,
+and class constant marked with a hook attribute. Methods of any visibility are
+supported — protected and private methods are bound and registered as closures,
+so they work as hook callbacks without being public.
 
-`boot()` throws a `ReflectionException` if the class cannot be reflected. If you
-already have a bootable contract in your project, the trait's `boot()` satisfies
-it, so a class can both `use Hookable` and implement your own `Bootable`
-interface.
+The trait exposes no public method on purpose: it stays out of your component
+lifecycle and lets the consuming class decide when registration runs and under
+what name. Call `registerHookCallbacks()` from your own method — a `boot()`,
+`init()`, or whatever contract your project already uses.
+
+`registerHookCallbacks()` throws a `ReflectionException` if the class cannot be
+reflected.
 
 ### The `#[Action]` and `#[Filter]` Attributes
 
@@ -148,11 +157,11 @@ interface Hook
 
 ## Best Practices
 
-### Decide When to Boot
+### Decide When to Register
 
-This package fires no WordPress hooks of its own — you decide when `boot()`
-runs. Booting on an appropriate hook (such as `init` or after your services are
-constructed) keeps registration predictable:
+This package fires no WordPress hooks of its own — you decide when
+`registerHookCallbacks()` runs. Registering on an appropriate hook (such as
+`init` or after your services are constructed) keeps registration predictable:
 
 ```php
 add_action('after_setup_theme', function (): void {
@@ -164,7 +173,7 @@ add_action('after_setup_theme', function (): void {
 
 Group related hooks by responsibility (assets, admin, REST, etc.) rather than
 collecting unrelated hooks in a single class. This keeps each class small and
-its `boot()` cost minimal.
+its `registerHookCallbacks()` cost minimal.
 
 ### Vendor Prefix When Necessary
 
