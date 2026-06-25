@@ -1,5 +1,7 @@
 # X3P0: Hooks
 
+![Nova, a blue alien, fishing in the countryside at a pond.](.github/assets/nova-hooks.webp)
+
 A lightweight, attribute-based hook system for WordPress plugins and themes. Built with PHP 8.1+, it lets you register WordPress actions and filters declaratively with `#[Action]` and `#[Filter]` attributes instead of manual `add_action()`/`add_filter()` plumbing.
 
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE.md)
