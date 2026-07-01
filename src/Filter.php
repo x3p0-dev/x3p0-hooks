@@ -36,12 +36,10 @@ class Filter implements Hook
 	 * Sets up the object state.
 	 *
 	 * @throws InvalidHookName If the hook name is empty.
-	 * @throws InvalidPriority If the priority is not an integer, numeric
-	 *                         string, or the `'first'`/`'last'` shorthand.
 	 */
 	public function __construct(
 		protected string $hook,
-		int|string $priority = 10
+		int|HookPriority $priority = HookPriority::Normal
 	) {
 		if (trim($hook) === '') {
 			throw new InvalidHookName(
@@ -49,16 +47,9 @@ class Filter implements Hook
 			);
 		}
 
-		$this->priority = match (true) {
-			$priority === 'first' => PHP_INT_MIN,
-			$priority === 'last'  => PHP_INT_MAX,
-			is_int($priority)     => $priority,
-			is_numeric($priority) => (int) $priority,
-			default               => throw new InvalidPriority(sprintf(
-				"Hook priority must be an integer, numeric string, 'first', or 'last'; got '%s'.",
-				$priority // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
-			))
-		};
+		$this->priority = is_int($priority)
+			? $priority
+			: $priority->toInt();
 	}
 
 	/**

@@ -12,7 +12,7 @@ A lightweight, attribute-based hook system for WordPress plugins and themes. Bui
 - **Attribute-Based Hooks**: Register WordPress actions and filters declaratively with `#[Action]` and `#[Filter]`
 - **Hook Any Member**: Attach hooks to methods, properties, or class constants
 - **Repeatable Attributes**: Register a single member on multiple hooks
-- **Priority Shorthand**: Use integers or the `'first'` / `'last'` keywords
+- **Priority Presets**: Use integers or the type-safe `HookPriority` enum (`First`, `Normal`, `Last`)
 - **Extensible**: Define your own hook attributes by implementing the `Hook` interface
 - **Lightweight**: Minimal overhead, no external dependencies
 - **Type-Safe**: Full PHP 8.1+ type declarations for better IDE support
@@ -114,12 +114,14 @@ public function content(string $content): string
 ```
 
 The attributes are repeatable, so a single member can be attached to several
-hooks. Priority accepts an integer or the shorthand `'first'` (`PHP_INT_MIN`) /
-`'last'` (`PHP_INT_MAX`):
+hooks. Priority accepts an integer or a `HookPriority` case — `First`
+(`PHP_INT_MIN`), `Normal` (`10`), or `Last` (`PHP_INT_MAX`):
 
 ```php
+use X3P0\Hooks\HookPriority;
+
 #[Action('init')]
-#[Action('wp_loaded', priority: 'first')]
+#[Action('wp_loaded', priority: HookPriority::First)]
 public function bootstrap(): void
 {
 	// Runs on both `init` (priority 10) and `wp_loaded` (priority PHP_INT_MIN).
@@ -132,7 +134,7 @@ Properties and class constants can be hooked too, in which case their value is
 returned to the filter. This is a concise way to provide a static filter value:
 
 ```php
-#[Filter('big_image_size_threshold', priority: 'last')]
+#[Filter('big_image_size_threshold', priority: HookPriority::Last)]
 protected const THRESHOLD_WIDTH = 3480;
 
 #[Filter('excerpt_length')]
